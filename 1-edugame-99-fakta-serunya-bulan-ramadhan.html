@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edugame Kuis Anak Saleh</title>
+    <style>
+        /* WARNA DEFAULT & VARIABEL */
+        :root {
+            --bg-kotak: #ffffff;       
+            --warna-tombol: #00acc1;   
+            --warna-tombol-hover: #00838f; 
+            --garis-tepi: #00acc1;     
+        }
+
+        body { 
+            font-family: 'Comic Sans MS', cursive, sans-serif; 
+            
+            /* PENGATURAN GAMBAR BACKGROUND OTOMATIS */
+            background-color: #e0f7fa; 
+            background-image: url('background1resolusi besar.html'); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            
+            text-align: center; 
+            margin: 0; padding: 0;
+            transition: background-image 0.8s ease-in-out; 
+        }
+        
+        .container { 
+            background: var(--bg-kotak); 
+            max-width: 550px; 
+            margin: 40px auto; 
+            padding: 30px 20px; 
+            border-radius: 20px; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2); 
+            border: 5px solid var(--garis-tepi);
+            position: relative;
+            transition: border-color 0.8s ease;
+        }
+        
+        #init-screen, #start-screen, #game-screen, #level-screen, #result-screen { display: none; }
+        #init-screen { display: block; padding: 50px 20px; }
+
+        .image-box {
+            width: 100%; height: 250px; object-fit: cover;
+            border-radius: 15px; margin-bottom: 20px;
+            background-color: #b2ebf2; border: 3px dashed var(--garis-tepi);
+            transition: border-color 0.8s ease;
+        }
+        
+        /* ANIMASI JUDUL MELAYANG (BOUNCE) */
+        @keyframes bounceTitle {
+            0%, 100% { transform: translateY(0); text-shadow: 0px 5px 5px rgba(0,0,0,0.1); }
+            50% { transform: translateY(-15px); text-shadow: 0px 15px 10px rgba(0,0,0,0.2); }
+        }
+        .animated-title { 
+            color: #00838f; margin-bottom: 10px; font-size: 38px;
+            animation: bounceTitle 2.5s infinite ease-in-out; display: inline-block;
+        }
+
+        h2 { color: #ff8f00; }
+        h3.result-title { font-size: 28px; margin-bottom: 5px; color: #d84315; }
+        p.subtitle { color: #006064; font-size: 18px; margin-bottom: 25px; }
+        
+        /* Navigasi Atas */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .level-badge { background-color: #ffca28; color: #d84315; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin: 0; }
+        .btn-small { background-color: #9e9e9e; color: white; font-size: 14px; padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; }
+        .btn-small:hover { background-color: #757575; }
+        #btn-back { display: none; }
+
+        /* Timer HP Bulat */
+        .timer-container {
+            position: relative; width: 70px; height: 70px; border-radius: 50%;
+            background: conic-gradient(#4CAF50 100%, #eeeeee 0);
+            display: flex; justify-content: center; align-items: center;
+            margin: 0 auto 15px auto; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: background 0.3s linear;
+        }
+        .timer-inner {
+            width: 50px; height: 50px; border-radius: 50%; background: white;
+            display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 22px; color: #333;
+        }
+
+        .question-meta { font-size: 16px; font-weight: bold; color: #00838f; margin-bottom: 10px; background-color: #e0f2f1; padding: 5px 15px; border-radius: 15px; display: inline-block; }
+
+        .btn { background-color: var(--warna-tombol); color: white; border: none; padding: 12px 20px; margin: 8px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background-color: var(--warna-tombol-hover); transform: scale(1.05); }
+        .btn-start { font-size: 20px; padding: 15px 40px; border-radius: 30px; background-color: #ff9800; }
+        .btn-start:hover { background-color: #f57c00; }
+        .btn-option { width: 45%; }
+        #score-text { font-size: 18px; font-weight: bold; color: #d84315; margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;}
+
+        /* KONTROL SUARA MENGAMBANG */
+        .sound-controls {
+            position: fixed; top: 15px; right: 15px; z-index: 2000;
+            background: rgba(255,255,255,0.9); padding: 8px 15px; border-radius: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; border: 2px solid #00acc1;
+        }
+        .sound-btn { background: none; border: none; font-size: 22px; cursor: pointer; padding: 0; }
+        .volume-slider { width: 80px; cursor: pointer; }
+
+        /* OVERLAY EFEK UMUM */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .overlay-benar { background-color: rgba(255, 255, 255, 0.9); background-image: url('konfeti.gif'); background-size: cover; background-position: center; }
+        .overlay-salah { background-color: rgba(50, 50, 50, 0.85); }
+        .overlay-timeout { background-color: rgba(0, 0, 0, 0.9); } 
+        .overlay-pause { background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); } 
+
+        .feedback-box { background: white; padding: 30px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-width: 400px; border: 5px solid white; }
+        .overlay-benar .feedback-box { border-color: #4CAF50; }
+        .overlay-salah .feedback-box { border-color: #F44336; background: #ffebee;}
+        .overlay-timeout .feedback-box { border-color: #FF9800; background: #fff3e0;}
+        .feedback-img { width: 200px; height: 200px; object-fit: contain; margin-bottom: 15px; }
+
+        /* GAYA KHUSUS KOTAK PAUSE */
+        .pause-box {
+            background: white; padding: 25px; border-radius: 25px; text-align: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: popIn 0.3s ease-out; 
+            max-width: 450px; border: 6px solid #4dd0e1; display: flex; flex-direction: column; align-items: center;
+        }
+        .pause-title { color: #00838f; margin: 0 0 20px 0; font-size: 24px; }
+        .pause-content { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 15px; }
+        .pause-char-img { width: 160px; height: auto; object-fit: contain; transition: transform 0.2s; }
+        .pause-buttons { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+        .btn-pause-menu {
+            background-color: #4dd0e1; color: white; font-weight: bold; padding: 12px 15px;
+            border: none; border-radius: 30px; cursor: pointer; transition: 0.2s; font-size: 16px;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+        }
+        .btn-pause-menu:hover { background-color: #00acc1; transform: scale(1.05); }
+
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        #result-animation { width: 100%; height: 250px; border: none; border-radius: 15px; margin-bottom: 15px; background-color: #f0f0f0; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+    <div class="sound-controls">
+        <button class="sound-btn" id="mute-btn" onclick="toggleMute()" title="Sembunyikan/Tampilkan Suara">🔊</button>
+        <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.1" value="0.4" oninput="aturVolume(this.value)" title="Pelankan/Besarkan Suara">
+    </div>
+
+    <div id="correct-overlay" class="overlay overlay-benar">
+        <div class="feedback-box">
+            <img id="correct-char" src="jawaban-benar.html" alt="Benar!" class="feedback-img" onerror="this.src='https://via.placeholder.com/200?text=Karakter+Senang'">
+            <h2 style="color: #2e7d32;">Masya Allah, Benar! 🎉</h2>
+            <p style="color: #388e3c; font-weight: bold;">Kamu hebat sekali!</p>
+            <button class="btn btn-start" style="background-color: #4CAF50;" onclick="nextQuestion()">Lanjut ➡️</button>
+        </div>
+    </div>
+
+    <div id="wrong-overlay" class="overlay overlay-salah">
+        <div class="feedback-box">
+            <img id="wrong-char" src="salah-kurang-tepat.html" alt="Salah!" class="feedback-img" onerror="this.src='https://via.placeholder.com/200?text=Karakter+Sedih'">
+            <h2 style="color: #c62828;">Yaaah, Kurang Tepat 🥀</h2>
+            <p style="color: #d32f2f; font-weight: bold;">Jangan menyerah, coba lebih fokus ya!</p>
+            <button class="btn btn-start" style="background-color: #F44336;" onclick="nextQuestion()">Tetap Semangat 💪</button>
+        </div>
+    </div>
+
+    <div id="timeout-overlay" class="overlay overlay-timeout">
+        <div class="feedback-box">
+            <img id="timeout-char" src="waktu-habis-.html" alt="Waktu Habis!" class="feedback-img" onerror="this.src='https://via.placeholder.com/200?text=Karakter+Kaget'">
+            <h2 style="color: #ef6c00;">Waktu Habis! ⏰</h2>
+            <p style="color: #e65100; font-weight: bold;">Kamu terlalu lama berpikir. Yuk coba lagi!</p>
+            <button class="btn btn-start" style="background-color: #FF9800;" onclick="retryQuestion()">Ulangi Soal 🔄</button>
+        </div>
+    </div>
+
+    <div id="pause-overlay" class="overlay overlay-pause">
+        <div class="pause-box">
+            <h2 class="pause-title">Permainan Dijeda ⏸️</h2>
+            <div class="pause-content">
+                <img id="pause-character" class="pause-char-img" src="pause-lanjut-bermain.html" onerror="this.src='https://via.placeholder.com/160x200?text=Karakter'">
+                <div class="pause-buttons">
+                    <button class="btn-pause-menu" onclick="lanjutDariPause()">lanjut bermain</button>
+                    <button class="btn-pause-menu" onclick="ulangiSoalIni()">ulangi soal ini</button>
+                    <button class="btn-pause-menu" onclick="mainLagi()">ulangi dari awal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="init-screen">
+            <h1 style="color: #00838f;">Assalamu'alaikum!</h1>
+            <p class="subtitle">Tekan tombol di bawah untuk masuk ke area Edugame 🚪</p>
+            <button class="btn btn-start" onclick="masukKeCover()">Buka Edugame</button>
+        </div>
+
+        <div id="start-screen">
+            <img class="image-box" src="kuis-anak-saleh.html" alt="Sampul Game" onerror="this.src='https://via.placeholder.com/500x250?text=Gambar+Cover'">
+            <h1 class="animated-title">✨ Kuis Anak Saleh ✨</h1>
+            <p class="subtitle">Buktikan ilmu agamamu dari tingkat Santri hingga Ustadz!</p>
+            <button class="btn btn-start" onclick="mulaiGame()">Mulai Bermain 🚀</button>
+        </div>
+
+        <div id="level-screen">
+            <img class="image-box" id="level-image" src="placeholder.jpg" alt="Karakter Level">
+            <h1 id="level-title">Level 1</h1>
+            <p class="subtitle" id="level-desc">Deskripsi level</p>
+            <button class="btn btn-start" onclick="showQuestionMulai()">Siap! Lanjut 🎯</button>
+        </div>
+
+        <div id="game-screen">
+            <div class="top-nav">
+                <button id="btn-back" class="btn-small" onclick="kembaliKeSoalSebelumnya()">⬅️ Kembali</button>
+                <div class="level-badge" id="current-level-badge">Level Aktif</div>
+                <button class="btn-small" style="background-color: #ff9800;" onclick="pauseGame()">⏸️ Pause</button>
+            </div>
+
+            <div class="timer-container" id="hp-timer">
+                <div class="timer-inner" id="timer-text">10</div>
+            </div>
+
+            <div class="question-meta" id="q-meta">⭐ Bintang: 1 | Skor: +10</div>
+            <img class="image-box" id="game-image" src="placeholder.jpg" alt="Gambar Soal">
+            <h3 id="question-text">Pertanyaan...</h3>
+            <div id="options-container"></div>
+            <p id="score-text">Total Skor Saat Ini: 0</p>
+        </div>
+
+        <div id="result-screen">
+            <img id="result-animation" src="placeholder.jpg" alt="Hasil Animasi" onerror="this.src='https://via.placeholder.com/500x250?text=Gambar+Hasil'">
+            
+            <h3 class="result-title" id="final-title">Tingkatan / Gelar</h3>
+            <h1 id="final-score">Skor: 0</h1>
+            <p class="subtitle" id="final-message">Ucapan khusus akan muncul di sini</p>
+            <button class="btn btn-start" onclick="mainLagi()">Main Lagi 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // PENGATURAN SUARA & VOLUME
+        // ==========================================
+        const bgmStart = new Audio("bgm-1.mp3"); bgmStart.loop = true;
+        const bgmGame = new Audio("bgm-2.mp3"); bgmGame.loop = true;
+        const bgmResult = new Audio("bgm-1.mp3"); bgmResult.loop = true;
+
+        const sfxKlik = new Audio("sfx-bubble-pop.mp3"); sfxKlik.preload = "auto";
+        const sfxBenar = new Audio("sfx-correct-(ting).mp3"); sfxBenar.preload = "auto";
+        const sfxSalah = new Audio("https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg"); sfxSalah.preload = "auto";
+        const sfxTimeout = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg"); sfxTimeout.preload = "auto";
+
+        let isMuted = false; let globalVolume = 0.4;
+        semuaAudioTerapkanVolume(globalVolume);
+
+        function semuaAudioTerapkanVolume(vol) {
+            [bgmStart, bgmGame, bgmResult, sfxKlik, sfxBenar, sfxSalah, sfxTimeout].forEach(a => a.volume = vol);
+        }
+
+        function aturVolume(val) {
+            globalVolume = val; semuaAudioTerapkanVolume(globalVolume);
+            if (globalVolume == 0) { document.getElementById('mute-btn').innerText = '🔇'; isMuted = true; } 
+            else { document.getElementById('mute-btn').innerText = '🔊'; isMuted = false; }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            [bgmStart, bgmGame, bgmResult, sfxKlik, sfxBenar, sfxSalah, sfxTimeout].forEach(a => a.muted = isMuted);
+            if (isMuted) { document.getElementById('mute-btn').innerText = '🔇'; } 
+            else {
+                document.getElementById('mute-btn').innerText = '🔊';
+                if (document.getElementById('volume-slider').value == 0) { document.getElementById('volume-slider').value = 0.4; aturVolume(0.4); }
+            }
+        }
+
+        function mainkanKlik() { sfxKlik.currentTime = 0; sfxKlik.play().catch(e => console.log("Audio klik belum siap")); }
+
+        // ==========================================
+        // FUNGSI PAUSE & RESUME
+        // ==========================================
+        function pauseGame() {
+            mainkanKlik();
+            clearInterval(timerInterval); 
+            bgmGame.pause();              
+            document.getElementById('pause-character').src = 'pause-lanjut-bermain.html'; 
+            document.getElementById("pause-overlay").style.display = "flex";
+        }
+
+        function lanjutDariPause() {
+            mainkanKlik();
+            document.getElementById("pause-overlay").style.display = "none";
+            bgmGame.play().catch(e => console.log("BGM Game error"));
+            mulaiTimer(true); 
+        }
+
+        function ulangiSoalIni() {
+            mainkanKlik();
+            document.getElementById("pause-overlay").style.display = "none";
+            bgmGame.play().catch(e => console.log("BGM Game error"));
+            showQuestion(); 
+        }
+
+        // ==========================================
+        // DATA LEVEL 
+        // ==========================================
+        const gameLevels = [
+            {
+                levelName: "Level 1: Santri Cilik",
+                description: "Halo! Mari kita mulai dari pertanyaan yang mudah dulu, ya. Semangat!",
+                characterImg: "level1-santri-cilik.html", 
+                bgImage: "bg-pagi.jpg", 
+                warnaGaris: "#00acc1",
+                questions: [
+                    { image: "kapan-waktu-yang-tepat-untuk-benar-benar-berhenti-makan-sahur.html", question: "Kapan waktu yang tepat untuk benar-benar berhenti makan sahur?", options: ["Saat ngantuk", "Azan Subuh", "Matahari Terbit", "Jam 6 Pagi"], answer: "Azan Subuh", bintang: "⭐", poin: 10 },
+                    { image: "apakah-menangis-karena-sedih-membatalkan-puasa.html", question: "Apakah menangis karena sedih membatalkan puasa?", options: ["Batal", "Dosa", "Tidak Batal", "Makruh"], answer: "Tidak Batal", bintang: "⭐", poin: 10 },
+                    { image: "sikat-gigi.html", question: "Saat berpuasa, kita boleh menggosok gigi asalkan...", options: ["Busa tidak tertelan", "Pakai air es", "Hanya sikat gigi depan", "Tidak pakai sikat"], answer: "Busa tidak tertelan", bintang: "⭐", poin: 10 },
+                    { image: "gak-sengaja-minum.html", question: "Jika kita lupa sedang berpuasa lalu tidak sengaja minum, maka puasanya...", options: ["Batal", "Tidak Batal (Rezeki)", "Harus Bayar Fidyah", "Dosa"], answer: "Tidak Batal (Rezeki)", bintang: "⭐", poin: 10 }
+                ]
+            },
+            {
+                levelName: "Level 2: Marbot Andalan",
+                description: "Wah, kamu lulus Level 1! Sekarang pertanyaannya agak menantang nih.",
+                characterImg: "level2.html", 
+                bgImage: "bg-siang.jpg", 
+                warnaGaris: "#43a047",
+                questions: [
+                    { image: "al-qur'an-diturunkan-pelan-pelan-selama-berapa-tahun.html", question: "Al-Qur'an diturunkan pelan-pelan selama berapa tahun?", options: ["10 Tahun", "15 Tahun", "23 Tahun", "30 Tahun"], answer: "23 Tahun", bintang: "⭐⭐", poin: 10 },
+                    { image: "Malam-Lailatul-Qadar.html", question: "Malam Lailatul Qadar setara dengan 1.000 bulan, yang sama dengan berapa tahun?", options: ["50 Tahun", "83 Tahun", "100 Tahun", "1000 Tahun"], answer: "83 Tahun", bintang: "⭐⭐", poin: 10 },
+                    { image: "makanan-apa-yang-paling-baik-untuk-mengawali-buka-puasa.html", question: "Menurut sunnah Nabi, makanan apa yang paling baik untuk mengawali buka puasa?", options: ["Gorengan", "Es Buah", "Kurma & Air Putih", "Nasi Padang"], answer: "Kurma & Air Putih", bintang: "⭐⭐", poin: 10 }
+                ]
+            },
+            {
+                levelName: "Level 3: Ustadz Kehormatan",
+                description: "Luar biasa! Ini adalah level terakhir yang penuh ujian ilmu sejarah dan sains puasa!",
+                characterImg: "level3.html", 
+                bgImage: "bg-malam.jpg", 
+                warnaGaris: "#fb8c00",
+                questions: [
+                    { image: "perang-badar.html", question: "Berapa jumlah pasukan muslim saat Perang Badar di bulan Ramadan?", options: ["100 Orang", "313 Orang", "1.000 Orang", "3.000 Orang"], answer: "313 Orang", bintang: "⭐⭐⭐", poin: 10 },
+                    { image: "soal-perut-sehat.html", question: "Bagaimana rumus perut sehat yang diajarkan Nabi Muhammad SAW?", options: ["Semua diisi nasi", "1/2 Makanan, 1/2 Air", "1/3 Makanan, 1/3 Udara, 1/3 Air", "Hanya minum"], answer: "1/3 Makanan, 1/3 Udara, 1/3 Air", bintang: "⭐⭐⭐", poin: 10 },
+                    { image: "soal-nilai-satu-huruf.html", question: "Di bulan Ramadan, setiap satu huruf Al-Qur'an yang dibaca bernilai...", options: ["Satu Kebaikan", "Lima Kebaikan", "Sepuluh Kebaikan", "Seratus Kebaikan"], answer: "Sepuluh Kebaikan", bintang: "⭐⭐⭐", poin: 10 }
+                ]
+            }
+        ];
+
+        let currentLevelIndex = 0; let currentQuestionIndex = 0; let score = 0;
+        let riwayatJawaban = []; let timerInterval; let timeLeft = 10;
+
+        function showScreen(screenId) {
+            document.getElementById("init-screen").style.display = "none";
+            document.getElementById("start-screen").style.display = "none";
+            document.getElementById("level-screen").style.display = "none";
+            document.getElementById("game-screen").style.display = "none";
+            document.getElementById("result-screen").style.display = "none";
+            document.getElementById(screenId).style.display = "block";
+        }
+
+        function masukKeCover() { mainkanKlik(); bgmStart.play().catch(e => console.log("BGM Start error")); showScreen("start-screen"); }
+        function mulaiGame() { mainkanKlik(); bgmStart.pause(); bgmStart.currentTime = 0; bgmGame.play().catch(e => console.log("BGM Game error")); startLevel(0); }
+
+        function startLevel(levelIdx) {
+            currentLevelIndex = levelIdx; currentQuestionIndex = 0; const levelData = gameLevels[currentLevelIndex];
+            document.documentElement.style.setProperty('--bg-luar', levelData.warnaBackground);
+            document.documentElement.style.setProperty('--garis-tepi', levelData.warnaGaris);
+            document.getElementById("level-title").innerText = levelData.levelName;
+            document.getElementById("level-desc").innerText = levelData.description;
+            let charImg = document.getElementById("level-image");
+            charImg.src = levelData.characterImg; charImg.onerror = function() { this.src = "https://via.placeholder.com/500x250?text=Gambar+Karakter"; };
+            showScreen("level-screen");
+        }
+
+        function showQuestionMulai() { mainkanKlik(); showQuestion(); }
+
+        function showQuestion() {
+            showScreen("game-screen");
+            const levelData = gameLevels[currentLevelIndex]; const qData = levelData.questions[currentQuestionIndex];
+            document.getElementById("btn-back").style.display = (riwayatJawaban.length > 0) ? "inline-block" : "none";
+            document.getElementById("current-level-badge").innerText = levelData.levelName;
+            document.getElementById("q-meta").innerText = `Tingkat: ${qData.bintang} | Poin: +${qData.poin}`;
+            let imgElem = document.getElementById("game-image");
+            imgElem.src = qData.image; imgElem.onerror = function() { this.src = "https://via.placeholder.com/400x200?text=Gambar+Soal"; };
+            document.getElementById("question-text").innerText = qData.question;
+            document.getElementById("score-text").innerText = "Total Skor Saat Ini: " + score;
+            
+            const optionsContainer = document.getElementById("options-container"); optionsContainer.innerHTML = "";
+            qData.options.forEach(option => {
+                const btn = document.createElement("button"); btn.innerText = option; btn.classList.add("btn", "btn-option");
+                btn.onclick = () => { checkAnswer(option, qData.answer, qData.poin); }; optionsContainer.appendChild(btn);
+            });
+            mulaiTimer(false);
+        }
+
+        function mulaiTimer(isResume = false) {
+            clearInterval(timerInterval); if (!isResume) { timeLeft = 10; } 
+            updateTampilanTimer();
+            timerInterval = setInterval(() => {
+                timeLeft--; updateTampilanTimer();
+                if (timeLeft <= 0) { clearInterval(timerInterval); waktuHabis(); }
+            }, 1000); 
+        }
+
+        function updateTampilanTimer() {
+            document.getElementById("timer-text").innerText = timeLeft;
+            let percentage = (timeLeft / 10) * 100; let color = "#4CAF50"; 
+            if (percentage <= 50 && percentage > 25) color = "#FFC107"; else if (percentage <= 25) color = "#F44336"; 
+            document.getElementById("hp-timer").style.background = `conic-gradient(${color} ${percentage}%, #eeeeee 0)`;
+        }
+
+        function waktuHabis() { sfxTimeout.currentTime = 0; sfxTimeout.play().catch(e => console.log("Audio timeout error")); document.getElementById("timeout-overlay").style.display = "flex"; }
+        function retryQuestion() { mainkanKlik(); document.getElementById("timeout-overlay").style.display = "none"; showQuestion(); }
+
+        function checkAnswer(selected, correct, poinDiperoleh) {
+            clearInterval(timerInterval); let benarMboten = (selected === correct);
+            riwayatJawaban.push({ level: currentLevelIndex, soal: currentQuestionIndex, apakahBenar: benarMboten, poinSoal: poinDiperoleh });
+
+            if (benarMboten) {
+                score += poinDiperoleh; sfxBenar.currentTime = 0; sfxBenar.play().catch(e => console.log("Audio benar error"));
+                document.getElementById("correct-overlay").style.display = "flex";
+            } else {
+                sfxSalah.currentTime = 0; sfxSalah.play().catch(e => console.log("Audio salah error"));
+                document.getElementById("wrong-overlay").style.display = "flex";
+            }
+        }
+
+        function nextQuestion() {
+            mainkanKlik(); document.getElementById("correct-overlay").style.display = "none"; document.getElementById("wrong-overlay").style.display = "none";
+            currentQuestionIndex++; const levelData = gameLevels[currentLevelIndex];
+            if (currentQuestionIndex < levelData.questions.length) { showQuestion(); } 
+            else { currentLevelIndex++; if (currentLevelIndex < gameLevels.length) { startLevel(currentLevelIndex); } else { showFinalResult(); } }
+        }
+
+        function kembaliKeSoalSebelumnya() {
+            if (riwayatJawaban.length === 0) return; 
+            mainkanKlik(); clearInterval(timerInterval); let riwayatTerakhir = riwayatJawaban.pop();
+            if (riwayatTerakhir.apakahBenar) score -= riwayatTerakhir.poinSoal; 
+            currentLevelIndex = riwayatTerakhir.level; currentQuestionIndex = riwayatTerakhir.soal;
+            const levelData = gameLevels[currentLevelIndex];
+            document.body.style.backgroundImage = `url('${levelData.bgImage}')`;
+            document.documentElement.style.setProperty('--garis-tepi', levelData.warnaGaris);
+            showQuestion();
+        }
+
+        function showFinalResult() {
+            clearInterval(timerInterval); showScreen("result-screen");
+            bgmGame.pause(); bgmGame.currentTime = 0; bgmResult.currentTime = 0; bgmResult.play().catch(e => console.log("BGM Result error"));
+
+            let title = "", message = "", animationFile = "";
+            switch (score) {
+                case 100: title = "🌟 SANGAT BAIK SEKALI 🌟"; message = "Masya Allah, sempurna (100)! Kamu benar-benar juara pengetahuan Islam."; animationFile = "hasil-sempurna.html"; break;
+                case 90: case 80: title = "👍 SANGAT BAIK"; message = "Hebat sekali! Sedikit lagi kamu bisa mendapatkan nilai sempurna."; animationFile = "hasil-sangat-baik.html"; break;
+                case 70: case 60: case 50: title = "🙂 BAIK"; message = "Cukup bagus! Pengetahuanmu sudah keren, terus ditingkatkan ya."; animationFile = "hasil-baik.html"; break;
+                case 40: case 30: title = "📖 CUKUP"; message = "Kamu sudah berusaha dengan baik! Yuk, perbanyak lagi belajarnya."; animationFile = "hasil-cukup.html"; break;
+                case 20: case 10: title = "💪 TETAP SEMANGAT"; message = "Tidak apa-apa, orang hebat juga berawal dari belajar!"; animationFile = "hasil-kurang.html"; break;
+                case 0: title = "🌱 AYO BELAJAR LAGI"; message = "Ayo baca lagi buku '99 Fakta Serunya Ramadhan' dan coba lagi!"; animationFile = "hasil-ayo-belajar-lagi.html"; break;
+            }
+
+            document.getElementById("final-title").innerText = title; document.getElementById("final-score").innerText = "Skor Akhir: " + score;
+            document.getElementById("final-message").innerText = message; document.getElementById("result-animation").src = animationFile;
+        }
+
+        function mainLagi() { mainkanKlik(); setTimeout(() => { location.reload(); }, 300); }
+    </script>
+</body>
+</html>
